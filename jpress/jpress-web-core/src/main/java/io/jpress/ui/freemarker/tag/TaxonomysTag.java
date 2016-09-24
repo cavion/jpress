@@ -15,25 +15,49 @@
  */
 package io.jpress.ui.freemarker.tag;
 
+import java.math.BigInteger;
 import java.util.List;
 
 import io.jpress.core.render.freemarker.JTag;
+import io.jpress.model.ModelSorter;
 import io.jpress.model.Taxonomy;
 import io.jpress.model.query.TaxonomyQuery;
 
 public class TaxonomysTag extends JTag {
 
+	public static final String TAG_NAME = "jp.taxonomys";
+
+	private List<Taxonomy> filterList;
+
+	public TaxonomysTag() {
+	}
+
+	public TaxonomysTag(List<Taxonomy> taxonomys) {
+		filterList = taxonomys;
+	}
+
 	@Override
 	public void onRender() {
 
-		int count = getParamToInt("count", 0);
-		count = count <= 0 ? 10 : count;
-
+		Integer count = getParamToInt("count");
 		String module = getParam("module");
+		String activeClass = getParam("activeClass", "active");
 		String type = getParam("type");
-		String orderby = getParam("orderby");
+		String orderby = getParam("orderBy");
+		BigInteger parentId = getParamToBigInteger("parentId");
+		Boolean asTree = getParamToBool("asTree");
 
-		List<Taxonomy> list = TaxonomyQuery.me().findListByModuleAndType(module, type, orderby, count);
+		List<Taxonomy> list = TaxonomyQuery.me().findListByModuleAndType(module, type, parentId, count, orderby);
+		if (filterList != null && list != null && list.size() > 0) {
+			for (Taxonomy taxonomy : list) {
+				taxonomy.initFilterList(filterList, activeClass);
+			}
+		}
+
+		if (asTree != null && asTree == true) {
+			ModelSorter.tree(list);
+		}
+
 		setVariable("taxonomys", list);
 		renderBody();
 	}

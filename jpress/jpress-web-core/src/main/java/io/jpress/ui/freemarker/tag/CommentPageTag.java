@@ -15,6 +15,8 @@
  */
 package io.jpress.ui.freemarker.tag;
 
+import javax.servlet.http.HttpServletRequest;
+
 import com.jfinal.core.JFinal;
 import com.jfinal.plugin.activerecord.Page;
 
@@ -26,11 +28,15 @@ import io.jpress.model.query.CommentQuery;
 import io.jpress.utils.StringUtils;
 
 public class CommentPageTag extends JTag {
+	
+	public static final String TAG_NAME = "jp.commentPage";
 
 	Content content;
 	int pageNumber;
+	HttpServletRequest request;
 
-	public CommentPageTag(Content content, int pageNumber) {
+	public CommentPageTag(HttpServletRequest request, Content content, int pageNumber) {
+		this.request = request;
 		this.content = content;
 		this.pageNumber = pageNumber;
 	}
@@ -38,13 +44,14 @@ public class CommentPageTag extends JTag {
 	@Override
 	public void onRender() {
 
-		int pageSize = getParamToInt("pagesize", 10);
+		int pageSize = getParamToInt("pageSize", 10);
 
 		Page<Comment> page = CommentQuery.me().paginateByContentId(pageNumber, pageSize, content.getId());
 		setVariable("page", page);
-
-		CommentPaginateTag cpt = new CommentPaginateTag(page, content);
-		setVariable("pagination", cpt);
+		setVariable("comments", page.getList());
+		
+		CommentPaginateTag pagination = new CommentPaginateTag(request, page, content);
+		setVariable("pagination", pagination);
 
 		renderBody();
 	}
@@ -52,15 +59,23 @@ public class CommentPageTag extends JTag {
 	public static class CommentPaginateTag extends BasePaginateTag {
 
 		final Content content;
+		final HttpServletRequest request;
 
-		public CommentPaginateTag(Page<Comment> page, Content content) {
+		public CommentPaginateTag(HttpServletRequest request, Page<Comment> page, Content content) {
 			super(page);
+			this.request = request;
 			this.content = content;
 		}
 
 		@Override
 		protected String getUrl(int pageNumber) {
 			String url = content.getUrlWithPageNumber(pageNumber);
+
+			String queryString = request.getQueryString();
+			if (StringUtils.isNotBlank(queryString)) {
+				url += "?" + queryString;
+			}
+
 			if (StringUtils.isNotBlank(getAnchor())) {
 				url += "#" + getAnchor();
 			}

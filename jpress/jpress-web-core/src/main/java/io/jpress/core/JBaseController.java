@@ -16,6 +16,9 @@
 package io.jpress.core;
 
 import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpSession;
 
@@ -26,10 +29,15 @@ import com.jfinal.core.JFinal;
 import com.jfinal.ext.interceptor.NotAction;
 import com.jfinal.i18n.Res;
 import com.jfinal.render.JsonRender;
+import com.jfinal.upload.UploadFile;
 
+import io.jpress.Consts;
 import io.jpress.core.render.AjaxResult;
 import io.jpress.core.render.JCaptchaRender;
+import io.jpress.model.User;
+import io.jpress.utils.AttachmentUtils;
 import io.jpress.utils.JsoupUtils;
+import io.jpress.utils.RequestUtils;
 import io.jpress.utils.StringUtils;
 
 public class JBaseController extends Controller {
@@ -73,17 +81,42 @@ public class JBaseController extends Controller {
 		return mParaCount;
 	}
 
+	/**
+	 * 是否是手机浏览器
+	 * 
+	 * @return
+	 */
+	public boolean isMoblieBrowser() {
+		return RequestUtils.isMoblieBrowser(getRequest());
+	}
+
+	/**
+	 * 是否是微信浏览器
+	 * 
+	 * @return
+	 */
+	public boolean isWechatBrowser() {
+		return RequestUtils.isWechatBrowser(getRequest());
+	}
+
+	/**
+	 * 是否是IE浏览器
+	 * 
+	 * @return
+	 */
+	public boolean isIEBrowser() {
+		return RequestUtils.isIEBrowser(getRequest());
+	}
+
 	public boolean isAjaxRequest() {
-		String header = getRequest().getHeader("X-Requested-With");
-		return "XMLHttpRequest".equalsIgnoreCase(header);
+		return RequestUtils.isAjaxRequest(getRequest());
 	}
 
 	public boolean isMultipartRequest() {
-		String contentType = getRequest().getContentType();
-		return contentType != null && contentType.toLowerCase().indexOf("multipart") != -1;
+		return RequestUtils.isMultipartRequest(getRequest());
 	}
 
-	protected int getPageNumbere() {
+	protected int getPageNumber() {
 		int page = getParaToInt("page", 1);
 		if (page < 1) {
 			page = 1;
@@ -120,8 +153,8 @@ public class JBaseController extends Controller {
 	public void renderAjaxResultForSuccess(String message) {
 		renderAjaxResult(message, 0, null);
 	}
-	
-	public void renderAjaxResultForSuccess(String message,Object data) {
+
+	public void renderAjaxResultForSuccess(String message, Object data) {
 		renderAjaxResult(message, 0, data);
 	}
 
@@ -149,20 +182,6 @@ public class JBaseController extends Controller {
 		} else {
 			renderJson(ar);
 		}
-
-	}
-
-	public boolean isIEBrowser() {
-		String ua = getRequest().getHeader("User-Agent").toLowerCase();
-		if (ua != null && ua.indexOf("msie") > 0) {
-			return true;
-		}
-
-		if (ua != null && ua.indexOf("gecko") > 0 && ua.indexOf("rv:11") > 0) {
-			return true;
-		}
-
-		return false;
 	}
 
 	@Override
@@ -225,6 +244,18 @@ public class JBaseController extends Controller {
 		return result;
 	}
 
+	public BigInteger getParaToBigInteger() {
+		return toBigInteger(getPara(), null);
+	}
+
+	public BigInteger getParaToBigInteger(int index) {
+		return toBigInteger(getPara(index), null);
+	}
+
+	public BigInteger getParaToBigInteger(int index, BigInteger defaultValue) {
+		return toBigInteger(getPara(index), defaultValue);
+	}
+
 	public BigInteger getParaToBigInteger(String name) {
 		return toBigInteger(getRequest().getParameter(name), null);
 	}
@@ -245,34 +276,77 @@ public class JBaseController extends Controller {
 			throw new ActionException(404, "Can not parse the parameter \"" + value + "\" to BigInteger value.");
 		}
 	}
-	
+
 	@Before(NotAction.class)
 	public String getIPAddress() {
-		String ip = getRequest().getHeader("X-getRequest()ed-For");
-		if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-			ip = getRequest().getHeader("X-Forwarded-For");
-		}
-		if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-			ip = getRequest().getHeader("Proxy-Client-IP");
-		}
-		if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-			ip = getRequest().getHeader("WL-Proxy-Client-IP");
-		}
-		if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-			ip = getRequest().getHeader("HTTP_CLIENT_IP");
-		}
-		if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-			ip = getRequest().getHeader("HTTP_X_FORWARDED_FOR");
-		}
-		if (StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip)) {
-			ip = getRequest().getRemoteAddr();
-		}
-		return ip;
+		return RequestUtils.getIpAddress(getRequest());
+	}
+
+	public User getLoginedUser() {
+		return getAttr(Consts.ATTR_USER);
 	}
 
 	@Before(NotAction.class)
 	public String getUserAgent() {
-		return getRequest().getHeader("User-Agent");
+		return RequestUtils.getUserAgent(getRequest());
+	}
+
+	public Map<String, String> getMetas(Map<String, String> filesMap) {
+		HashMap<String, String> metas = null;
+		Map<String, String[]> requestMap = getParaMap();
+		if (requestMap != null && !requestMap.isEmpty()) {
+			for (Map.Entry<String, String[]> entry : requestMap.entrySet()) {
+				String key = entry.getKey();
+				if (key.startsWith("meta:")) {
+					if (metas == null) {
+						metas = new HashMap<String, String>();
+					}
+					String value = null;
+					for (String v : entry.getValue()) {
+						if (StringUtils.isNotEmpty(v)) {
+							value = v;
+							break;
+						}
+					}
+					metas.put(key.substring(5), value);
+				}
+			}
+		}
+
+		if (filesMap != null) {
+			for (Map.Entry<String, String> entry : filesMap.entrySet()) {
+				String key = entry.getKey();
+				if (key.startsWith("meta:")) {
+					if (metas == null) {
+						metas = new HashMap<String, String>();
+					}
+					metas.put(key.substring(5), entry.getValue());
+				}
+			}
+		}
+
+		return metas;
+	}
+
+	public Map<String, String> getMetas() {
+		return getMetas(getUploadFilesMap());
+	}
+
+	public HashMap<String, String> getUploadFilesMap() {
+		List<UploadFile> fileList = null;
+		if (isMultipartRequest()) {
+			fileList = getFiles();
+		}
+
+		HashMap<String, String> filesMap = null;
+		if (fileList != null) {
+			filesMap = new HashMap<String, String>();
+			for (UploadFile ufile : fileList) {
+				String filePath = AttachmentUtils.moveFile(ufile).replace("\\", "/");
+				filesMap.put(ufile.getParameterName(), filePath);
+			}
+		}
+		return filesMap;
 	}
 
 }

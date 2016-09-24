@@ -15,142 +15,40 @@
  */
 package io.jpress.core.addon;
 
-public class Addon {
+public abstract class Addon {
 
-	private String id;
-	private String jarPath;
-	private String addonClass;
-	private String title;
-	private String description;
-	private String author;
-	private String authorWebsite;
-	private String version;
-	private int versionCode;
-	private String updateUrl;
-	private boolean hasError = false;
-	private boolean start = false;
+	private ThreadLocal<Boolean> tl = new ThreadLocal<Boolean>();
 
-	private IAddon addonImpl;
-	private final Hooks hooks = new Hooks();
+	private final Hooks hooks;
 
-	public String getId() {
-		return id;
-	}
-
-	public void setId(String id) {
-		this.id = id;
-	}
-
-	public String getJarPath() {
-		return jarPath;
-	}
-
-	public void setJarPath(String jarPath) {
-		this.jarPath = jarPath;
-	}
-
-	public String getAddonClass() {
-		return addonClass;
-	}
-
-	public void setAddonClass(String addonClass) {
-		this.addonClass = addonClass;
-	}
-
-	public String getTitle() {
-		return title;
-	}
-
-	public void setTitle(String title) {
-		this.title = title;
-	}
-
-	public String getDescription() {
-		return description;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
-	public String getAuthor() {
-		return author;
-	}
-
-	public void setAuthor(String author) {
-		this.author = author;
-	}
-
-	public String getAuthorWebsite() {
-		return authorWebsite;
-	}
-
-	public void setAuthorWebsite(String authorWebsite) {
-		this.authorWebsite = authorWebsite;
-	}
-
-	public String getVersion() {
-		return version;
-	}
-
-	public void setVersion(String version) {
-		this.version = version;
-	}
-
-	public int getVersionCode() {
-		return versionCode;
-	}
-
-	public void setVersionCode(int versionCode) {
-		this.versionCode = versionCode;
-	}
-
-	public String getUpdateUrl() {
-		return updateUrl;
-	}
-
-	public void setUpdateUrl(String updateUrl) {
-		this.updateUrl = updateUrl;
-	}
-
-	public IAddon getAddonImpl() {
-		return addonImpl;
-	}
-
-	public void setAddonImpl(IAddon addonImpl) {
-		this.addonImpl = addonImpl;
+	public Addon() {
+		hooks = new Hooks(this);
 	}
 
 	public Hooks getHooks() {
 		return hooks;
 	}
 
-	public boolean getHasError() {
-		return hasError;
+	protected void nextInvoke() {
+		tl.set(true);
 	}
 
-	public void setHasError(boolean hasError) {
-		this.hasError = hasError;
+	/**
+	 * 子类不要调用此方法
+	 */
+	public void hookInvokeFinished() {
+		tl.remove();
 	}
 
-	public boolean getStart() {
-		return start;
+	/**
+	 * 子类不要调用此方法
+	 */
+	public boolean letNextHookInvoke() {
+		return tl.get() != null && tl.get() == true;
 	}
 
-	public boolean start() {
-		if (addonImpl != null) {
-			start = addonImpl.onStart(hooks);
-			return start;
-		}
-		return false;
-	}
+	public abstract boolean onStart();
 
-	public boolean stop() {
-		if (addonImpl != null) {
-			start = addonImpl.onStop();
-			return start;
-		}
-		return false;
-	}
+	public abstract boolean onStop();
 
 }

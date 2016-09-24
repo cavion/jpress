@@ -92,6 +92,19 @@ JPress使用了比wordpress更宽松的LGPL开源协议，同时和国内的那�
 
 | 名字      | 金额   | 方式  | 说明  | 时间  |
 | :-------: |:----: | :-----:|----- |-----|
+| 微信匿名  | ￥15.00  | 微信   | 无 | 2016-9-19 17:33|
+| 微信匿名  | ￥6.66  | 微信   | 无 | 2016-9-19 16:43|
+| 信仰释心  | ￥99.99  | 支付宝   | 加油！ | 2016-9-8 21:50|
+| billy  | ￥66.00  | 支付宝   | 希望jpress越做越好！ | 2016-9-8 10:28|
+| 蔚蓝一方  | ￥200.00  | 支付宝   | 感谢你共享的jpress，加油！ | 2016-8-31 19:16|
+| 幸福乐呵呵  | ￥50.00  | 支付宝   | 希望能上架插件功能，帮主，顶你 | 2016-8-27 19:33|
+| 美男子  | ￥20.00  | 支付宝   | 还没有用，精神可嘉，钱不多表示支持 | 2016-8-25 15:24|
+| 匿名  | ￥16.88  | 微信匿名   | 无 | 2016-8-23 16:31|
+| 西瓜  | ￥18.00  | 支付宝   | 学习jFinal发现了jpress加油。 | 2016-8-23 17:14|
+| 刘磊  | ￥50.00  | 微信红包   | 请继续坚持，加油！ | 2016-8-22 19:52|
+| 执子之手  | ￥6.66  | 微信红包   | 钱少人傻，不要介意 | 2016-8-21 10:11|
+| 文杰  | ￥20.00  | 支付宝   | 支持下，海哥加油 | 2016-8-21 10:11|
+| 網oo魈oo卛  | ￥9.00  | QQ红包   | 无 | 2016-8-16 17:41|
 | 匿名  | ￥10.00  | 微信捐助   | 无 | 2016-8-12 11:19|
 | dythzx  | ￥100.00  | 微信红包   | 希望Jpress越做越好，已经采用做公司的网站了 | 2016-8-12 09:44|
 | skyearth  | ￥2.00  | QQ红包   | 无 | 2016-8-10 23:40|
@@ -170,3 +183,53 @@ JPress使用了比wordpress更宽松的LGPL开源协议，同时和国内的那�
 
 
 ### 您也可以加入JPress交流QQ群：288397536 ，欢迎给我提建议和bug。<br >或者给我邮件：fuhai999@gmail.com 
+
+
+####0.3版本较之前的版本，数据字段更新如下：
+
+```
+content表：
+新增：
+ +  `summary` text COMMENT '摘要',
+ +  `link_to` varchar(256) DEFAULT NULL COMMENT '连接到(常用于谋文章只是一个连接)',
+ +  `markdown_enable` tinyint(1) DEFAULT '0' COMMENT '是否启用markdown',
+ +  `author` varchar(128) DEFAULT NULL COMMENT '匿名稿的用户',
+ +  `user_email` varchar(128) DEFAULT NULL COMMENT '匿名稿的邮箱',
+ +  `user_ip` varchar(128) DEFAULT NULL COMMENT 'IP地址',
+ +  `user_agent` text COMMENT '发布浏览agent',
+ +  `rate` int(11) DEFAULT NULL COMMENT '评分分数',
+ +  `rate_count` int(10) unsigned DEFAULT '0' COMMENT '评分次数',
+ +  `comment_time` datetime DEFAULT NULL COMMENT '最后评论时间',
+
+
+
+user表：
+新增：
+ +  `realname` varchar(128) DEFAULT NULL COMMENT '实名',
+ +  `email_status` varchar(32) DEFAULT NULL COMMENT '邮箱状态（是否认证等）',
+ +  `mobile` varchar(32) DEFAULT NULL COMMENT '手机电话',
+ +  `mobile_status` varchar(32) DEFAULT NULL COMMENT '手机状态（是否认证等）',
+ +  `telephone` varchar(32) DEFAULT NULL COMMENT '固定电话',
+ +  `facebook` varchar(256) DEFAULT NULL,
+ +  `linkedin` varchar(256) DEFAULT NULL,
+ +  `birthday` datetime DEFAULT NULL COMMENT '生日',
+ +  `company` varchar(256) DEFAULT NULL COMMENT '公司',
+ +  `occupation` varchar(256) DEFAULT NULL COMMENT '职位、职业',
+ +  `address` varchar(256) DEFAULT NULL COMMENT '地址',
+ +  `zipcode` varchar(128) DEFAULT NULL COMMENT '邮政编码',
+ +  `site` varchar(256) DEFAULT NULL COMMENT '个人网址',
+ +  `graduateschool` varchar(256) DEFAULT NULL COMMENT '毕业学校',
+ +  `education` varchar(256) DEFAULT NULL COMMENT '学历',
+ +  `idcardtype` varchar(128) DEFAULT NULL COMMENT '证件类型：身份证 护照 军官证等',
+ +  `idcard` varchar(128) DEFAULT NULL COMMENT '证件号码',
+
+
+修改：
+-  `weibo` varchar(64) DEFAULT NULL COMMENT '微博',
++  `weibo` varchar(256) DEFAULT NULL COMMENT '微博',
+
+-  `phone` varchar(32) DEFAULT NULL COMMENT '手机电话',
++  `mobile` varchar(32) DEFAULT NULL COMMENT '手机电话',
+
+
+```

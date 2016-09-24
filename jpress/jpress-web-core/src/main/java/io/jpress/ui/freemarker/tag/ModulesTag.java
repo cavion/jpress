@@ -18,16 +18,18 @@ package io.jpress.ui.freemarker.tag;
 import java.util.List;
 
 import io.jpress.core.render.freemarker.JTag;
-import io.jpress.template.TplModule;
 import io.jpress.template.Template;
-import io.jpress.template.TemplateUtils;
+import io.jpress.template.TemplateManager;
+import io.jpress.template.TplModule;
 
 public class ModulesTag extends JTag {
+	
+	public static final String TAG_NAME = "jp.modules";
 
 	@Override
 	public void onRender() {
 
-		Template t = TemplateUtils.currentTemplate();
+		Template t = TemplateManager.me().currentTemplate();
 
 		if (t != null) {
 			List<TplModule> modules = t.getModules();

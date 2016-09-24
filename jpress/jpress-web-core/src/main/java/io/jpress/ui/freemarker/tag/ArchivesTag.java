@@ -10,6 +10,8 @@ import io.jpress.model.vo.Archive;
 import io.jpress.utils.StringUtils;
 
 public class ArchivesTag extends JTag {
+	
+	public static final String TAG_NAME = "jp.archives";
 
 	@Override
 	public void onRender() {

@@ -16,10 +16,12 @@
 package io.jpress.model.query;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.jfinal.plugin.activerecord.Page;
+import com.jfinal.plugin.ehcache.IDataLoader;
 
 import io.jpress.model.ModelSorter;
 import io.jpress.model.Taxonomy;
@@ -27,15 +29,20 @@ import io.jpress.utils.StringUtils;
 
 public class TaxonomyQuery extends JBaseQuery {
 
-	private static final Taxonomy DAO = new Taxonomy();
+	protected static final Taxonomy DAO = new Taxonomy();
 	private static final TaxonomyQuery QUERY = new TaxonomyQuery();
 
 	public static TaxonomyQuery me() {
 		return QUERY;
 	}
 
-	public Taxonomy findById(BigInteger id) {
-		return DAO.findById(id);
+	public Taxonomy findById(final BigInteger id) {
+		return DAO.getCache(id, new IDataLoader() {
+			@Override
+			public Object load() {
+				return DAO.findById(id);
+			}
+		});
 	}
 
 	public List<Taxonomy> findAll() {
@@ -55,18 +62,20 @@ public class TaxonomyQuery extends JBaseQuery {
 	}
 
 	public List<Taxonomy> findListByModuleAndType(String module, String type) {
-		return findListByModuleAndType(module, type, null, null);
+		return findListByModuleAndType(module, type, null, null, null);
 	}
 
-	public List<Taxonomy> findListByModuleAndType(String module, String type, String orderby ,Integer limit) {
+	public List<Taxonomy> findListByModuleAndType(String module, String type, BigInteger parentId, Integer limit,
+			String orderby) {
 
-		StringBuilder sqlBuilder = new StringBuilder("SELECT * FROM taxonomy t");
+		final StringBuilder sqlBuilder = new StringBuilder("SELECT * FROM taxonomy t");
 
 		boolean needWhere = true;
-		List<Object> params = new LinkedList<Object>();
+		final List<Object> params = new LinkedList<Object>();
 		needWhere = appendIfNotEmpty(sqlBuilder, "t.content_module", module, params, needWhere);
 		needWhere = appendIfNotEmpty(sqlBuilder, "t.`type`", type, params, needWhere);
-		
+		needWhere = appendIfNotEmpty(sqlBuilder, "t.`parent_id`", parentId, params, needWhere);
+
 		buildOrderBy(orderby, sqlBuilder);
 
 		if (limit != null) {
@@ -74,7 +83,20 @@ public class TaxonomyQuery extends JBaseQuery {
 			params.add(limit);
 		}
 
-		return DAO.find(sqlBuilder.toString(), params.toArray());
+		String key = buildKey(module, type, parentId, limit, orderby);
+		List<Taxonomy> data = DAO.getFromListCache(key, new IDataLoader() {
+			@Override
+			public Object load() {
+				if (params.isEmpty()) {
+					return DAO.find(sqlBuilder.toString());
+				}
+				return DAO.find(sqlBuilder.toString(), params.toArray());
+			}
+		});
+		
+		if (data == null)
+			return null;
+		return new ArrayList<Taxonomy>(data);
 	}
 
 	public List<Taxonomy> findListByModuleAndTypeAsTree(String module, String type) {
@@ -114,14 +136,28 @@ public class TaxonomyQuery extends JBaseQuery {
 	}
 
 	public Taxonomy findBySlugAndModule(String slug, String module) {
-		return DAO.doFindFirst("slug = ? and content_module=?", slug, module);
+		return DAO.doFindFirstByCache(Taxonomy.CACHE_NAME, module + ":" + slug, "slug = ? and content_module=?", slug,
+				module);
+	}
+
+	public List<Taxonomy> findBySlugAndModule(String[] slugs, String module) {
+
+		StringBuilder sqlBuilder = new StringBuilder("SELECT * FROM taxonomy t");
+
+		boolean needWhere = true;
+		List<Object> params = new LinkedList<Object>();
+		needWhere = appendIfNotEmpty(sqlBuilder, "t.content_module", module, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "t.`slug`", slugs, params, needWhere);
+
+		return DAO.find(sqlBuilder.toString(), params.toArray());
+
 	}
 
 	public boolean deleteById(BigInteger id) {
 		return DAO.deleteById(id);
 	}
-	
-	private void buildOrderBy(String orderBy, StringBuilder fromBuilder) {
+
+	protected void buildOrderBy(String orderBy, StringBuilder fromBuilder) {
 
 		if (StringUtils.isBlank(orderBy)) {
 			fromBuilder.append(" ORDER BY t.created DESC");
@@ -169,7 +205,16 @@ public class TaxonomyQuery extends JBaseQuery {
 		} else {
 			fromBuilder.append(orderbyInfo[1]);
 		}
+	}
 
+	private String buildKey(String module, Object... params) {
+		StringBuffer keyBuffer = new StringBuffer(module == null ? "" : "module:" + module);
+		if (params != null && params.length > 0) {
+			for (int i = 0; i < params.length; i++) {
+				keyBuffer.append("-p").append(i).append(":").append(params[i]);
+			}
+		}
+		return keyBuffer.toString().replace(" ", "");
 	}
 
 }

@@ -18,7 +18,7 @@ package io.jpress.core.render;
 import com.jfinal.render.IMainRenderFactory;
 import com.jfinal.render.Render;
 
-import io.jpress.template.TemplateUtils;
+import io.jpress.template.TemplateManager;
 
 public class JpressRenderFactory implements IMainRenderFactory {
 
@@ -29,16 +29,26 @@ public class JpressRenderFactory implements IMainRenderFactory {
 	public Render getRender(String view) {
 		// front url
 		if (view.startsWith("/templates")) {
-			String renderType = TemplateUtils.currentTemplate().getRenderType();
-			if ("thymeleaf".equalsIgnoreCase(renderType)) {
-				return new ThymeleafRender(view);
-			} else if ("freemarker".equalsIgnoreCase(renderType)) {
-				return new JFreemarkerRender(view);
+			String renderType = TemplateManager.me().currentTemplate().getRenderType();
+
+			if (renderType == null) {
+				return new JFreemarkerRender(view, true);
 			}
+
+			if (renderType.equalsIgnoreCase("freemarker")) {
+				return new JFreemarkerRender(view, true);
+			}
+
+			else if (renderType.equalsIgnoreCase("thymeleaf")) {
+				return new ThymeleafRender(view);
+			}
+
+			return new JFreemarkerRender(view, true);
+
 		}
 
-		//admin url
-		return new JFreemarkerRender(view);
+		// admin url
+		return new JFreemarkerRender(view, false);
 	}
 
 	@Override

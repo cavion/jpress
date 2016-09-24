@@ -10,8 +10,7 @@
 	</parent>
 	<artifactId>jpress-model</artifactId>
 	<name>jpress-model</name>
-
-
+	<url>http://jpress.io</url>
 	<packaging>jar</packaging>
 
 	<properties>
@@ -31,6 +30,16 @@
 		</dependency>
 
 		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>druid</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+
+		<dependency>
 			<groupId>io.jpress</groupId>
 			<artifactId>jpress-utils</artifactId>
 			<version>1.0</version>
@@ -45,8 +54,8 @@
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
-		
-		
+
+
 		<dependency>
 			<groupId>io.jpress</groupId>
 			<artifactId>jpress-consts</artifactId>

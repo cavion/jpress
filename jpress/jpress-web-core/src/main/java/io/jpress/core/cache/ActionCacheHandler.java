@@ -36,6 +36,11 @@ public class ActionCacheHandler extends Handler {
 	@Override
 	public void handle(String target, HttpServletRequest request, HttpServletResponse response, boolean[] isHandled) {
 
+		if (ActionCacheManager.isCloseActionCache()) {
+			next.handle(target, request, response, isHandled);
+			return;
+		}
+
 		Action action = JFinal.me().getAction(target, urlPara);
 		if (action == null) {
 			next.handle(target, request, response, isHandled);
@@ -50,8 +55,6 @@ public class ActionCacheHandler extends Handler {
 				return;
 			}
 		}
-		
-		
 
 		String originalTarget = (String) request.getAttribute("_original_target");
 		String cacheKey = StringUtils.isNotBlank(originalTarget) ? originalTarget : target;
@@ -61,12 +64,12 @@ public class ActionCacheHandler extends Handler {
 			queryString = "?" + queryString;
 			cacheKey += queryString;
 		}
-		
+
 		ActionCacheManager.enableCache(request);
 		ActionCacheManager.setCacheKey(request, cacheKey);
 		ActionCacheManager.setCacheContentType(request, actionCache.contentType());
 
-		String renderContent = ActionCacheManager.getCache(cacheKey);
+		String renderContent = ActionCacheManager.getCache(request, cacheKey);
 		if (renderContent != null) {
 			response.setContentType(actionCache.contentType());
 

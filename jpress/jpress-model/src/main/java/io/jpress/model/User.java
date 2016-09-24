@@ -47,7 +47,19 @@ public class User extends BaseUser<User> {
 	@Override
 	public boolean update() {
 		removeCache(getId());
+		removeCache(getMobile());
+		removeCache(getUsername());
+		removeCache(getEmail());
 		return super.update();
+	}
+
+	@Override
+	public boolean delete() {
+		removeCache(getId());
+		removeCache(getMobile());
+		removeCache(getUsername());
+		removeCache(getEmail());
+		return super.delete();
 	}
 
 	public String getUrl() {

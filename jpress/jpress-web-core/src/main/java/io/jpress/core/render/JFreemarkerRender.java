@@ -36,42 +36,71 @@ import com.jfinal.render.RenderException;
 
 import freemarker.template.Template;
 import io.jpress.Consts;
+import io.jpress.core.Jpress;
 import io.jpress.core.cache.ActionCacheManager;
 import io.jpress.model.query.OptionQuery;
 import io.jpress.utils.StringUtils;
 
 public class JFreemarkerRender extends FreeMarkerRender {
 
-	public JFreemarkerRender(String view) {
+	private boolean enableCdnProcess;
+
+	public JFreemarkerRender(String view, boolean enableCdnProcess) {
 		super(view);
+		this.enableCdnProcess = enableCdnProcess;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public void render() {
 
-		if (!ActionCacheManager.isEnableCache(request)) {
-			super.render();
-			return;
-		}
-
-		response.setContentType(ActionCacheManager.getCacheContentType(request));
+		Map<String, Object> jpTags = new HashMap<String, Object>();
+		jpTags.putAll(Jpress.jpressTags);
 
 		Map data = new HashMap();
 		for (Enumeration<String> attrs = request.getAttributeNames(); attrs.hasMoreElements();) {
 			String attrName = attrs.nextElement();
-			data.put(attrName, request.getAttribute(attrName));
+			if (attrName.startsWith("jp.")) {
+				jpTags.put(attrName.substring(3), request.getAttribute(attrName));
+			} else {
+				data.put(attrName, request.getAttribute(attrName));
+			}
+		}
+		data.put("jp", jpTags);
+
+		String htmlContent = getHtmlContent(data);
+
+		// 排除 后台的CDN 处理，防止外一CDN出问题导致后台无法登陆
+		if (enableCdnProcess) {
+			htmlContent = processCDN(htmlContent); // CDN处理
 		}
 
+		if (ActionCacheManager.isCloseActionCache()) {
+			WriterHtml(htmlContent, getContentType(), false);
+			return;
+		}
+
+		if (!ActionCacheManager.isEnableCache(request)) {
+			WriterHtml(htmlContent, getContentType(), false);
+			return;
+		}
+
+		WriterHtml(htmlContent, ActionCacheManager.getCacheContentType(request), true);
+	}
+
+	private void WriterHtml(String htmlContent, String contentType, boolean putCache) {
+		response.setContentType(contentType);
 		PrintWriter responseWriter = null;
 		try {
-			String htmlContent = getHtmlContent(data);
-			htmlContent = processCDN(htmlContent); // CDN处理
-
 			responseWriter = response.getWriter();
 			responseWriter.write(htmlContent);
-			ActionCacheManager.putCache(request, htmlContent);
+			if (putCache) {
+				ActionCacheManager.putCache(request, htmlContent);
+			}
 		} catch (Exception e) {
+			if (Jpress.isDevMode()) {
+				e.printStackTrace();
+			}
 			throw new RenderException(e);
 		} finally {
 			close(responseWriter);
@@ -89,6 +118,9 @@ public class JFreemarkerRender extends FreeMarkerRender {
 			osWriter.flush();
 			return baos.toString(Consts.CHARTSET_UTF8);
 		} catch (Exception e) {
+			if (Jpress.isDevMode()) {
+				e.printStackTrace();
+			}
 			throw new RenderException(e);
 		} finally {
 			close(baos);

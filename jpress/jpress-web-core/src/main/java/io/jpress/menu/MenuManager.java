@@ -18,7 +18,8 @@ package io.jpress.menu;
 import java.util.LinkedList;
 
 import io.jpress.core.addon.HookInvoker;
-import io.jpress.plugin.message.MessageKit;
+import io.jpress.message.MessageKit;
+import io.jpress.utils.StringUtils;
 
 public class MenuManager {
 
@@ -37,18 +38,18 @@ public class MenuManager {
 		}
 
 		HookInvoker.menuInitBefore(this);
-		
+
 		StringBuilder htmlBuilder = new StringBuilder();
 		for (MenuGroup group : menuGroups) {
 			htmlBuilder.append(group.generateHtml());
 		}
-		
+
 		HookInvoker.menuInitAfter(this);
 
 		return htmlBuilder.toString();
 	}
 
-	public void reset() {
+	public void refresh() {
 		menuGroups.clear();
 	}
 
@@ -58,6 +59,35 @@ public class MenuManager {
 
 	public void addMenuGroup(int index, MenuGroup gourp) {
 		menuGroups.add(index, gourp);
+	}
+
+	public void removeMenuGroupById(String id) {
+		if (StringUtils.isBlank(id)) {
+			return;
+		}
+
+		MenuGroup deleteGroup = null;
+		for (MenuGroup menuGroup : menuGroups) {
+			if (id.equals(menuGroup.getId())) {
+				deleteGroup = menuGroup;
+				break;
+			}
+		}
+		if (deleteGroup != null) {
+			menuGroups.remove(deleteGroup);
+		}
+	}
+
+	public MenuGroup getMenuGroupById(String id) {
+		if (StringUtils.isBlank(id)) {
+			return null;
+		}
+		for (MenuGroup menuGroup : menuGroups) {
+			if (id.equals(menuGroup.getId())) {
+				return menuGroup;
+			}
+		}
+		return null;
 	}
 
 	public LinkedList<MenuGroup> getMenuGroups() {

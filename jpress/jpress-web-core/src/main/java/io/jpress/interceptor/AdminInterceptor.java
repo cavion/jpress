@@ -15,17 +15,15 @@
  */
 package io.jpress.interceptor;
 
-import io.jpress.Consts;
-import io.jpress.menu.MenuManager;
-import io.jpress.model.User;
-import io.jpress.utils.EncryptUtils;
-
 import com.jfinal.aop.Interceptor;
 import com.jfinal.aop.Invocation;
 import com.jfinal.core.Controller;
 
-public class AdminInterceptor implements Interceptor {
+import io.jpress.menu.MenuManager;
+import io.jpress.model.User;
 
+public class AdminInterceptor implements Interceptor {
+	
 	@Override
 	public void intercept(Invocation inv) {
 
@@ -50,8 +48,6 @@ public class AdminInterceptor implements Interceptor {
 		User user = InterUtils.tryToGetUser(inv);
 		
 		if (user != null && user.isAdministrator()) {
-			controller.setAttr(Consts.ATTR_USER, user);
-			controller.setAttr("ucode", EncryptUtils.generateUcode(user.getId(),user.getSalt()));
 			controller.setAttr("_menu_html", MenuManager.me().generateHtml());
 			inv.invoke();
 			return;
@@ -59,5 +55,6 @@ public class AdminInterceptor implements Interceptor {
 
 		controller.redirect("/admin/login");
 	}
+	
 
 }

@@ -26,8 +26,15 @@ public class Metadata extends BaseMetadata<Metadata> {
 	@Override
 	public boolean update() {
 		removeCache(getId());
-		removeCache(getObjectType() + getMetaKey() + getObjectId());
+		removeCache(getObjectType() + getObjectId() + getMetaKey());
 		return super.update();
+	}
+
+	@Override
+	public boolean delete() {
+		removeCache(getId());
+		removeCache(getObjectType() + getObjectId() + getMetaKey());
+		return super.delete();
 	}
 
 }

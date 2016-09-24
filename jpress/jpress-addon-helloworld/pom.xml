@@ -11,6 +11,7 @@
 
 	<artifactId>jpress-addon-helloworld</artifactId>
 	<name>jpress-addon-helloworld</name>
+	<url>http://jpress.io</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -48,6 +49,7 @@
 			<artifactId>jpress-web-core</artifactId>
 			<version>1.0</version>
 			<type>jar</type>
+			<classifier>classes</classifier>
 			<scope>compile</scope>
 		</dependency>
 

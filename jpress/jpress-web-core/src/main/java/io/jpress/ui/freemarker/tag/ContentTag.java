@@ -23,6 +23,8 @@ import io.jpress.model.query.ContentQuery;
 import io.jpress.utils.StringUtils;
 
 public class ContentTag extends JTag {
+	
+	public static final String TAG_NAME = "jp.content";
 
 	@Override
 	public void onRender() {

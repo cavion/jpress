@@ -83,18 +83,89 @@ JPress，一个wordpress的java代替版本，使用JFinal开发。支持类似w
 #### 菜单设置
 #### 微信配置
 
+微信配置需要JPress端配置和微信公众号端两者同时配置。
+##### JPress端配置
+1. 进入微信公众号管理后台 `http://mp.weixin.qq.com`，依次进入`开发` > `公众号设置`，查看AppID(应用ID)和AppSecret(应用秘钥)。
+3. 进入JPress后台，找到`微信配置`页面，填写正确的AppID和AppSecret，同时token随意填写，比如填写`jpress`。
+
+##### 微信公众号后台配置
+1. 进入微信公众号管理后台 `http://mp.weixin.qq.com`，在`公众号设置`里找到`服务器配置`。
+2. 服务器配置内容如下：
+
+> **URL(服务器地址)**：`http://www.你的域名.com/wechat`，比如我的博客网址是：`http://www.yangfuhai.com`，那么就填写 `http://www.yangfuhai.com/wechat`
+
+> **Token(令牌)**：填写`jpress`，此处要保证和你JPress后台的token里填写的一模一样。
+
+> **EncodingAESKey(消息加解密密钥)**：随机生成。比如：trJAaCyaexHuLB1FsQ0QKjVFI3zFtQNRiJ5qkp9Hx1z
+
+>**消息加解密方式**：明文模式
+
 
 
 ## 模板开发
 
-###开发一个模板的helloworld
-
-如果您是新手，可以先看下视频教程 ： [http://www.yangfuhai.com/post/22.html](http://www.yangfuhai.com/post/22.html)
-
 开发一个全新的模板，主要有以下几个步骤：
-> 1. 建立模板配置文件 tpl_config.xml，用来说明模板的作者和模型。
-> 2. 建立一个tpl_screenshot.png图片，用来在JPress后台显示模板截图。
-> 3. 建立index.html 用来显示网站首页。
+
+
+ 1、 建立一个空的文件夹，用来存放模板文件，一般文件夹的名字用英文。
+ 
+ 2、 在这个文件建立一个`tpl_config.xml`文件，用来配置模板的信息和模型。
+  `tpl_config.xml`的内容如下：
+  
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<infos>
+		<id>模板ID</id>
+		<title>模板名称</title>
+		<description>模板描述</description>
+	</infos>
+	
+	<module title="文章" name="article" list="所有文章" add="撰写文章" comment="评论">
+		<taxonomy title="专题" name="category" />
+	</module>
+	
+</config>
+```
+说明：
+> 1. 通过infos类配置模板的信息，其中模板的id在整个jpress中必须唯一。
+> 2. 通过module来定义此模板支持的内容模型，
+> 3. 通过taxonomy定义了内容支持的分类类别。可能有些会支持比如：标签、分类、小组等多种分类。
+  
+ 3、 在这个文件建立一个`tpl_screenshot.png`图片，用来在JPress后台显示模板截图。
+ 
+ 4、 在这个文件建立`index.html`用来显示网站首页。`index.html`内容如下：
+ 
+ ```
+<!DOCTYPE html>
+<html>
+<head>
+  <title>${WEB_NAME!}</title>
+</head>
+<body>
+<!-- 此处的 module="article" 中的 article 要和模型中定义的name一致，表示读取该模型的内容-->
+<@jp.indexPage module="article"> 
+	<#list page.getList() as content>
+		<a href="${content.url}">${content.title!}</a>
+	</#list>
+</@jp.indexPage >
+</body>
+</html>
+ ```
+ 说明：
+> 1. ${WEB_NAME!} 用来读取后台设置的网站名称。
+> 2. \<@jp.indexPage> </@jp.indexPage> 用来读取内容的列表。 
+> 3. <#list> </#list> 用来循环显示其包含的内容。
+ 
+ 5、把这个文件夹压缩成为`.zip`的压缩包，进入JPress后台，通过模板管理的 安装 功能安装完毕该模板后，就可以使用该模板了。
+ 
+ 
+ 
+ 到此，一个完整的模板制作流程制作完毕。如果不太明白，也可以先看下视频教程 ： [http://www.yangfuhai.com/post/22.html](http://www.yangfuhai.com/post/22.html)
+ 
+
+
+
 
 ###模板结构
 JPress的模板主要分为如下几类：
@@ -181,7 +252,144 @@ tpl_setting.html
 * thumbnail 是缩略图，name是缩略图的名称，size是缩略图的大写。模板配置好缩略图后，当用户或管理员上传图片，图片会被剪切成模板定义的缩略图。
 
 ###模板标签
-目前JPress提供的有如下标签，今后会一直更新，所以标签有可能一直在增加或修改：
+
+JPress的标签分为全局标签和普通标签。
+
+JPress标签的规则如下：
+
+1. 全局标签全部使用大写；
+2. 普通标签的属性名都是驼峰命名法；
+
+
+
+### 全局标签：
+全局标签又分为 数据标签和函数标签；
+
+* 数据标签代表某个数值；
+* 函数标签代表某个功能；
+
+目前JPress提供的全局数据标签有如下：
+
+```
+REQUEST;
+CPATH;
+TPATH;
+CTPATH;
+SPATH;
+JPRESS_VERSION;
+WEB_NAME;
+WEB_TITLE;
+WEB_SUBTITLE;
+META_KEYWORDS;
+META_DESCRIPTION;
+```
+
+目前JPress提供的全局函数标签有如下：
+
+```
+OPTION('key');
+OPTION_CHECKED('key','value');
+```
+
+
+
+###全局标签的使用
+
+#### REQUEST
+http的request对象，可以通过request获取请求的相关数据。
+
+使用代码：
+
+```
+${REQUEST!} 
+```
+或者
+
+```
+${REQUEST.requestURI!} 
+```
+
+#### CPATH
+ContextPath的简写，当jpress放在子目录访问的时候，可以通过CPATH获取耳机目录的路径；
+
+使用代码：
+
+```
+${CPATH!} 
+```
+
+#### TPATH
+模板路径，当目录文件指定到某CSS/JS时，可以通过添加TPATH,正确指定到相应文件。
+
+使用代码：
+
+```
+${TPATH!} 
+```
+例如，在目录文件里的代如下：
+
+```
+ <link rel="stylesheet" href="${CPATH}/assets/css/app.css"/>
+```
+可以指定到当前目录目录的`/assets/css/app.css`下。
+
+#### CTPATH
+CTPATH = CPATH + TPATH ；
+
+使用代码：
+
+```
+${CTPATH!} 
+```
+
+#### SPATH
+静态文件目录；
+
+#### JPRESS_VERSION
+JPress版本
+
+#### WEB_NAME
+网站名称
+
+#### WEB_TITLE
+网页标题
+
+#### WEB_SUBTITLE
+网页子标题
+
+#### META_KEYWORDS
+网页关键字
+
+#### META_DESCRIPTION
+网页描述
+
+#### OPTION
+通过这个函数标签，可以读取后台的所以配置信息；也就是可以读取option数据库表的值。
+
+使用代码：
+
+```
+${OPTION('web_name')!} <!--读取key为web_name的option配置-->
+```
+
+
+#### OPTION_CHECKED
+通过这个函数标签，可以读取后台的所以配置信息，判断后台的值是否等于输入的值。
+
+* 如果等于前台输入的值，这个标签这输出 checked="checked"
+* 如果不等于，则输出 空；
+
+使用代码：
+
+```
+${OPTION_CHECKED('web_name','杨福海的博客')!} 
+```
+如果后台配置option的`web_name`为`杨福海的博客`,那么`${OPTION_CHECKED('web_name','杨福海的博客')!} `这个代码就输出 `checked="checked"` ,否则输出空内容。
+
+
+
+### 普通标签：
+目前JPress提供的普通标签有如下，今后会一直更新，所以标签有可能一直在增加或修改：
 
 ```
 IndexPageTag
@@ -193,8 +401,10 @@ TagsTag
 UsersTag
 UserContentPageTag
 ModulesTag
-MenuTag
+MenusTag
 ImageTag
+NextContentTag
+PreviousContentTag
 ```
 其中：
 
@@ -207,8 +417,12 @@ ImageTag
 * **MenuTag** 网站菜单，可以用于任何页面
 * **TaxonomysTag** 分类列表，可以用于任何页面
 * **TagsTag** 标签列表，可以用于任何页面
+* **NextContentTag** 下一篇内容，只能用于内容详情页
+* **PreviousContentTag** 上一篇内容，只能用于内容详情页
 
-###标签的使用
+
+###普通标签的使用
+
 
 ####IndexPageTag
 
@@ -217,24 +431,24 @@ IndexPageTag标签 只能用在首页即index.html和单页即page_*.html。
 代码如下：
 
 ```
-<@indexPage module="article"> 
+<@jp.indexPage module="article"> 
 	<#list page.getList() as content>
 		<a href="${content.url}">${content.title}</a> <br />
 	</#list>
 	
 	<@pagination>
-		<#list pageItems as pItem>
-			<a href="${pItem.url}">${pItem.text}</a>
+		<#list pages as page>
+			<a href="${page.url}">${page.text}</a>
 		</#list>
 	</@pagination>
-</@indexPage>
+</@jp.indexPage>
 ```
 
 
 代码解释：
-> * <@indexPage> </@indexPage> 是 **IndexPageTag** 标签的开头和结尾。
+> * \<@jp.indexPage> </@jp.indexPage> 是 **IndexPageTag** 标签的开头和结尾。
 > * <#list> </#list> 是循环标签，会循环输出 **指定列表** 的所有内容，此标签属于freemarker模板引擎的自带标签。
-> * <@pagination> </@pagination> 是 **IndexPageTag** 标签的 **子标签**，用于显示 **页码** 列表。
+> * \<@pagination> </@pagination> 是 **IndexPageTag** 标签的 **子标签**，用于显示 **页码** 列表。
 
 indexPage标签属性：
 > * module ： 指定读取模型的内容。在如上代码中`module="article"`表示读取article模型的内容。
@@ -250,6 +464,22 @@ indexPage标签属性：
 ContentPageTag标签 和 IndexPageTag标签 的用法完全一样，唯一的区别是：
 ContentPageTag标签 只能在分类页使用，即只能在taxonomy.html 或 taxonomy_*.html上使用。
 
+代码如下：
+
+```
+<@jp.contentPage > 
+	<#list page.getList() as content>
+		<a href="${content.url}">${content.title}</a> <br />
+	</#list>
+	
+	<@pagination>
+		<#list pages as page>
+			<a href="${page.url}">${page.text}</a>
+		</#list>
+	</@pagination>
+</@jp.contentPage>
+```
+
 ContentPageTag标签支持的属性如下：
 > * pagesize ： 每页显示的条数
 > * orderby ：排序的字段或方法
@@ -257,6 +487,22 @@ ContentPageTag标签支持的属性如下：
 #### UserContentPageTag 
 UserContentPageTag标签 和 IndexPageTag标签 的用法完全一样，唯一的区别是：
 UserContentPageTag标签 只能在用户中心使用，用于显示**登陆用户**的文章。
+
+代码如下：
+
+```
+<@jp.userContentPage > 
+	<#list page.getList() as content>
+		<a href="${content.url}">${content.title}</a> <br />
+	</#list>
+	
+	<@pagination>
+		<#list pages as page>
+			<a href="${page.url}">${page.text}</a>
+		</#list>
+	</@pagination>
+</@jp.userContentPage>
+```
 
 UserContentPageTag标签支持的属性如下：
 > * pagesize ： 每页显示的条数
@@ -268,10 +514,35 @@ UserContentPageTag标签支持的属性如下：
 #### CommnetPageTag
 CommnetPageTag标签用于显示内容的回复列表（或叫评论列表），只能在内容详情页面使用，即只能在content.html 或 content_*.html 上使用。
 
+代码如下：
+
+```
+<@jp.commentPage > 
+	<#list page.getList() as content>
+		<a href="${content.url}">${content.title}</a> <br />
+	</#list>
+	
+	<@pagination>
+		<#list pages as page>
+			<a href="${page.url}">${page.text}</a>
+		</#list>
+	</@pagination>
+</@jp.commentPage>
+```
+
 CommnetPageTag标签支持的属性如下：
 > * pagesize ： 每页显示的条数。
 
+#### ContentTag
+在任意地方显示谋篇文章内容。
 
+代码如下：
+
+```
+<@jp.content id="123"> 
+	下一篇：<a href="${content.url}">${content.title}</a>
+</@jp.content>
+```
 
 #### ContentsTag
 文章列表标签，可以在任意页面使用此标签。此标签不带分页功能。
@@ -279,11 +550,11 @@ CommnetPageTag标签支持的属性如下：
 代码如下：
 
 ```
-<@jp_contents module="article" count="3" orderby="comment_count" hasThumbnail="true"> 
+<@jp.contents module="article" count="3" orderBy="comment_count" hasThumbnail="true"> 
 	<#list contents as content>
 		<a href="${content.url}">${content.title}</a> <br />
 	</#list> 
-</@jp_contents>
+</@jp.contents>
 ```
 
 代码解释：
@@ -296,59 +567,434 @@ ContentsTag标签支持的属性如下：
 > * module ：指定内容列表的模型
 > * style ： 指定内容列表的样式。
 > * flag ： 指定内容列表的flag标示。
-> * userid ： 指定内容列表的用户，即哪个用户发布的内容。
-> * parentid ： 
+> * userId ： 指定内容列表的用户，即哪个用户发布的内容。
+> * parentId ： 
 > * hasThumbnail ：指定内容列表是否必须包含或不包含缩略图。
 > * tag ： 指定哪个tag的内容列表。
-> * typeslug ：指定哪个分类下的内容列表。通过分类的slug来指定。
-> * typeid ： 指定哪个分类下的内容列表。通过分类的id来指定。
+> * typeSlug ：指定哪个分类下的内容列表。通过分类的slug来指定。
+> * typeId ： 指定哪个分类下的内容列表。通过分类的id来指定。
 > * keyword ： 指定哪个关键字的内容列表。
 > * orderby ： 指定内容列表的排序方式。
 > * count ： 指定内容列表的总数量。
 
+#### TaxonomyTag
+用于读取某个分类信息。
+
+代码如下：
+
+```
+<@jp.taxonomy id="1" > 
+	<a href="${taxonomy.url}">${taxonomy.title}</a>
+</@jp.taxonomy>
+```
 
 #### TaxonomysTag
+用于显示分类内容。
+
+代码如下：
+
+```
+<@jp.taxonomys>
+	<#list taxonomys as taxonomy>
+		<a href="${taxonomy.url!}">${taxonomy.title!}</a>
+	</#list>
+</@jp.taxonomys>
+```
 #### TagsTag
+用于显示TAG内容。
+
+代码如下：
+
+```
+<@jp.tags>
+	<#list tags as tag>
+		<a href="${tag.url!}">${tag.title!}</a>
+	</#list>
+</@jp.tags>
+```
 #### UsersTag
 
-#### MenuTag
+#### MenusTag
 网站菜单的标签。可以在任意页面使用，用于显示网站菜单导航。
 
 代码如下：
 
 ```
-<@jp_menu>
+<@jp.menus>
 	<#list menus as menu>
 		<li >
 	        <a  href="${menu.url!}">
 	        	${menu.title!}
-        		<#if menu.isActive() ??>
+        		<#if menu.isActive() >
         			<span class="x-a-border"></span>
         		</#if>
         	</a>
        </li>
 	</#list>
-</@jp_menu>
+</@jp.menus>
 ```
 代码解释：
 
 ```
-<#if menu.isActive() ??>
+<#if menu.isActive() >
 	<span class="x-a-border"></span>
 </#if>
 ```
 这段代码表示当前页面是否属于该菜单下的内容，如果属于该菜单，则输出`<span class="x-a-border"></span>`，不属于则不输出。常用来显示导航高亮。
 
+
+#### NextContentTag
+该标签只能在内容详情页面使用，用来显示下一篇内容。
+
+代码如下：
+
+```
+<@jp.next> 
+	下一篇：<a href="${content.url}">${content.title}</a>
+</@jp.next>
+```
+
+#### PreviousContentTag
+该标签只能在内容详情页面使用，用来显示上一篇内容。
+
+代码如下：
+
+```
+<@jp.previous> 
+	上一篇：<a href="${content.url}">${content.title}</a>
+</@jp.previous>
+```
+
 ###模板设置
 
 ## 插件开发
 ### helloworld
+
+
+```
+public class HelloAddon extends Addon {
+
+	/**
+	 * AddonController 请求的钩子
+	 * @param controller
+	 */
+	@Hook(Hooks.PROCESS_CONTROLLER)
+	public Render hello(Controller controller) {
+		// 访问 http://127.0.0.1:8080/addon 看到效果
+		return new TextRender("hello addon");
+	}
+
+	@Override
+	public boolean onStart() {
+		MessageKit.register(HelloMessage.class);
+		return true;
+	}
+
+	@Override
+	public boolean onStop() {
+		MessageKit.unRegister(HelloMessage.class);
+		return true;
+	}
+
+}
+```
+以上是一个插件最简单的例子。
+当该插件被安装，并启动的时候，该插件的`onStart()`方法会被触发，当该插件被停止的时候，`onStop()`会被触发，我们可以在`onStart()`做插件的一些初始化操作，在`onStop()`做些资源释放的操作。
+
+可以通过@Hook(Hooks.PROCESS_CONTROLLER)注解，让我们的方法去注册到某个`钩子`,当某逻辑执行的时候，会自动执行到该方法。
+
 ### 规范
 ### 钩子
 
 ## 高级
 ### 二次开发
+##### 规范
+在二次开发中，不要修改JPress的任何代码，而是建立自己的一个maven module模块，通过pom依赖的方式把jpress相关代码导入到自己的module中。
+
+maven模块的pom文件如下：
+
+```
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>io.jpress</groupId>
+		<artifactId>jpress</artifactId>
+		<version>1.0</version>
+	</parent>
+
+	<packaging>war</packaging>
+	<artifactId>jpress-your-modulen-ame</artifactId>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.jfinal</groupId>
+			<artifactId>jfinal</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-utils</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-oauth2</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-message</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-search-api</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-search-dbsimple</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-consts</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-model</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-web-core</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<classifier>classes</classifier>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-web-core</artifactId>
+			<version>1.0</version>
+			<type>war</type>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-web-front</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<classifier>classes</classifier>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-web-front</artifactId>
+			<version>1.0</version>
+			<type>war</type>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-web-admin</artifactId>
+			<version>1.0</version>
+			<type>jar</type>
+			<classifier>classes</classifier>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.jpress</groupId>
+			<artifactId>jpress-web-admin</artifactId>
+			<version>1.0</version>
+			<type>war</type>
+			<scope>compile</scope>
+		</dependency>
+
+	</dependencies>
+
+
+	<build>
+		<finalName>${project.artifactId}-${project.version}</finalName>
+		<resources>
+			<resource>
+				<directory>src/main/config</directory>
+				<includes>
+					<include>**/*.*</include>
+				</includes>
+				<filtering>false</filtering>
+			</resource>
+			<resource>
+				<directory>src/main/language</directory>
+				<includes>
+					<include>**/*.*</include>
+				</includes>
+				<filtering>false</filtering>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat6-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<port>8080</port>
+					<path>/jpress</path>
+					<uriEncoding>UTF-8</uriEncoding>
+					<server>tomcat7</server>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<port>8080</port>
+					<path>/jpress</path>
+					<uriEncoding>UTF-8</uriEncoding>
+					<server>tomcat7</server>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.mortbay.jetty</groupId>
+				<artifactId>maven-jetty-plugin</artifactId>
+				<version>6.1.10</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<encoding>utf-8</encoding>
+					<packagingExcludes>WEB-INF/web.xml</packagingExcludes>
+					<overlays>
+						<overlay>
+							<groupId>io.jpress</groupId>
+							<artifactId>jpress-web-core</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>io.jpress</groupId>
+							<artifactId>jpress-web-front</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>io.jpress</groupId>
+							<artifactId>jpress-web-admin</artifactId>
+						</overlay>
+					</overlays>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
+
+```
+这样，你的module就有了一个具体的web功能，你可以在里面添加自己的controller，model以及其他任何代码。此时，我们在运行我们的程序的时候，是运行我们自己新建的这个module，不再是jpress-web了，放到服务器运行的war包也是我们这个module，不再是jpress-web。
+
+#### JPress的消息机制
+#####后台菜单的定义
+JPress在初始化后台菜单的时候，会发送一个初始化菜单的消息，所以我们在操作（添加、修改、删除）后台菜单的时候，只需要编写一个监听器，监听后台菜单的初始化，并对其操作即可。
+
+如下代码：
+
+```
+@Listener(action = MenuManager.ACTION_INIT_MENU, async = false, weight = Listener.DEFAULT_WEIGHT + 1)
+public class MenuInitListener implements MessageListener {
+
+	@Override
+	public void onMessage(Message message) {
+
+		MenuManager manager = message.getData();
+
+		manager.removeMenuGroupById("wechat"); //移除后台微信菜单
+		manager.removeMenuGroupById("tools"); //移除后台的工具菜单
+		manager.removeMenuGroupById("addon"); //移除后台的插件菜单
+
+		MenuGroup templateMenu = manager.getMenuGroupById("template"); //获得后台的模板菜单
+		templateMenu.removeMenuItemById("list"); //移除后台的 模板列表菜单
+		templateMenu.removeMenuItemById("install"); //移除后台的 安装模板菜单
+		
+		//添加模板的首页设置菜单
+		templateMenu.addMenuItem(0,new MenuItem("index", "/admin/index/setting", "首页设置")); 
+
+	}
+
+}
+```
+
+#####系统启动初始化
+通过消息机制，JPress在启动的时候，会发送启动的消息，若在二次开发的过程中，需要在系统启动的时候做些自己业务逻辑相关的初始化工作，只需要如下代码即可：
+
+```
+@Listener(action = Actions.JPRESS_STARTED)
+public class StartedListener implements MessageListener {
+
+	@Override
+	public void onMessage(Message message) {
+
+		System.out.println(">>>>>>>>>>>>系统启动了");
+		
+		//添加自己的自定义标签
+		Jpress.addTag("slider", new SliderTag());
+		
+	}
+}
+
+```
+
 ### 数据库操作
+关于jpress原始的数据库，jpress已经提供了 xxxQuery的类来操作了，如果不能满足你的需求，给我提交反馈即可。
+若在jpress二次开发中新增了自己的表，可以通过jpress-model里的`io.jpress.code.generator`来生成自己的代码。
 
 ## 关于
 ### 开发者

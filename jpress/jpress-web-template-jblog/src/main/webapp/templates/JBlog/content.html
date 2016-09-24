@@ -56,17 +56,19 @@ function reply(id){
 				</p>
 	  </div>
       <div class="x-details-content x-padding-top-10 x-padding-bottom-10 aritcle">
-        
         ${content.text!}
         
+        <#if OPTION('jpblog_wechat_pay_enable')?? && OPTION('jpblog_wechat_pay_enable')=='true'>
         <div class="reward-content">
-          <p><img src="${CPATH}${option('jpblog_wechat_pay_image')!}"/> </p>
-          <p>${option('jpblog_wechat_pay_tips')!'打赏一个呗~~'}</p>
+          <p><img src="${CPATH}${OPTION('jpblog_wechat_pay_image')!}"/> </p>
+          <p>${OPTION('jpblog_wechat_pay_tips')!'打赏一个呗~~'}</p>
         </div>
+        </#if>
 
       </div>
     </div>
     <!-- -->
+    <#if content.isCommentEnable() >
     <form action="${CPATH}/comment/submit" method="post"  id="comment">
     <input type="hidden" name="cid" value="${(content.id)!}" >
     <input type="hidden" name="anchor" value="comment" >
@@ -78,7 +80,7 @@ function reply(id){
       <div class="x-layout-100 clearfix">
         <textarea name="text" class="x-layout-100 x-border-grey x-box-border x-padding-5 x-item-space-8 body-bacground" placeholder="说点什么吧..."></textarea>
       </div>
-      <#if option('comment_need_captcha') ?? && option('comment_need_captcha')=='true'>
+      <#if OPTION('comment_need_captcha') ?? && OPTION('comment_need_captcha')=='true'>
       <div class="x-layout-100 clearfix login-box ">
 		<p class="x-pull-left x-layout-10 login-box-title">验证码：</p>
 		<p class="x-pull-left x-layout-20"><input type="text" name="comment_captcha"></p>
@@ -90,8 +92,9 @@ function reply(id){
       </div>
     </div>
     </form>
+    </#if>
     <!-- -->
-    <@commentPageTag pagesize="10">
+    <@jp.commentPage pageSize="10">
      <#if page ??> 
      <div class="x-white-box" id="clist">
       <h3 class="x-box-title">
@@ -107,7 +110,7 @@ function reply(id){
         </div>
         <div class="x-pull-left x-padding-left-2 x-layout-90 x-box-border comment">
           <p class="x-margin-bottom-5 x-padding-top-2 x-box-border">${comment.author!comment.nickname!comment.username!} 
-          <span class="x-font-grey">${comment.created?string('yyyy-MM-dd')!}</span>
+          <span class="x-font-grey">${(comment.created?string("yyyy-MM-dd"))!}</span>
           </p>
           
           <#if comment.qc_content ??>
@@ -129,7 +132,7 @@ function reply(id){
     	<#if (page.totalRow > 10 )>
     	<ul class="x-page">
 			<@pagination anchor="clist">
-				<#list pageItems as pi>
+				<#list pages as pi>
 				<li class="${pi.style!}">
 					<a href="${pi.url!}">${pi.text!}</a>
 				</li>
@@ -139,15 +142,15 @@ function reply(id){
 		</#if>
     
     </#if>
-     </@commentPageTag>
+     </@jp.commentPage>
     <!-- -->
   </div>
   <!-- -->
   <div class="x-pull-right x-layout-25 blog-sm-right">
     <div class="x-white-box x-font-center">
-        <p><img class="x-image-radus x-item-space-6" src="${CPATH}${(user.avatar)!TPATH+'/assets/images/avatar.jpg'}"/></p>
-        <p>${(user.nickname)!(user.username)!}</p>
-        <p class="x-font-grey x-margin-bottom-10 x-margin-top-10">${(user.signature)!'这家伙很赖，连签名都懒得填写...'}</p>
+        <p><img class="x-image-radus x-item-space-6" src="${CPATH}${(content.user.avatar)!TPATH+'/assets/images/avatar.jpg'}"/></p>
+        <p>${(content.user.nickname)!(content.user.username)!}</p>
+        <p class="x-font-grey x-margin-bottom-10 x-margin-top-10">${(content.user.signature)!'这家伙很赖，连签名都懒得填写...'}</p>
     </div>
  	<#include "_content_box1.html"/> 
 	<#include "_content_box2.html"/> 

@@ -18,7 +18,9 @@ package io.jpress.model;
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.jfinal.core.JFinal;
 import com.jfinal.kit.PathKit;
@@ -30,11 +32,13 @@ import io.jpress.model.ModelSorter.ISortModel;
 import io.jpress.model.base.BaseContent;
 import io.jpress.model.core.Table;
 import io.jpress.model.query.CommentQuery;
-import io.jpress.model.query.MetaDataQuery;
+import io.jpress.model.query.ContentQuery;
+import io.jpress.model.query.TaxonomyQuery;
+import io.jpress.model.query.UserQuery;
 import io.jpress.model.utils.ContentRouter;
 import io.jpress.model.utils.PageRouter;
 import io.jpress.model.utils.TaxonomyRouter;
-import io.jpress.template.TemplateUtils;
+import io.jpress.template.TemplateManager;
 import io.jpress.template.Thumbnail;
 import io.jpress.utils.JsoupUtils;
 import io.jpress.utils.StringUtils;
@@ -57,13 +61,38 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 	private List<Content> childList;
 	private Content parent;
 	private List<Metadata> metadatas;
+	private User user;
+	private Object object;
 
-	public <T> T getTemp(Object key, IDataLoader dataloader) {
-		return CacheKit.get("content_temp", key, dataloader);
+	public <T> T getFromListCache(Object key, IDataLoader dataloader) {
+		Set<String> inCacheKeys = CacheKit.get(CACHE_NAME, "cachekeys");
+
+		Set<String> cacheKeyList = new HashSet<String>();
+		if (inCacheKeys != null) {
+			cacheKeyList.addAll(inCacheKeys);
+		}
+
+		cacheKeyList.add(key.toString());
+		CacheKit.put(CACHE_NAME, "cachekeys", cacheKeyList);
+
+		return CacheKit.get("content_list", key, dataloader);
 	}
 
-	public void clearTemp() {
-		CacheKit.removeAll("content_temp");
+	public void clearList() {
+		Set<String> list = CacheKit.get(CACHE_NAME, "cachekeys");
+		if (list != null && list.size() > 0) {
+			for (String key : list) {
+				if (!key.startsWith("module:")) {
+					CacheKit.remove("content_list", key);
+					continue;
+				}
+
+				// 不清除其他模型的内容
+				if (key.startsWith("module:" + getModule())) {
+					CacheKit.remove("content_list", key);
+				}
+			}
+		}
 	}
 
 	@Override
@@ -75,9 +104,23 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 			removeCache(getSlug());
 		}
 
-		clearTemp();
+		clearList();
 
 		return super.update();
+	}
+
+	@Override
+	public boolean delete() {
+		if (getId() != null) {
+			removeCache(getId());
+		}
+		if (getSlug() != null) {
+			removeCache(getSlug());
+		}
+
+		clearList();
+
+		return super.delete();
 	}
 
 	@Override
@@ -90,7 +133,7 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 			removeCache(getSlug());
 		}
 
-		clearTemp();
+		clearList();
 
 		return super.save();
 	}
@@ -110,6 +153,56 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 
 	public String getNickame() {
 		return get("nickname");
+	}
+
+	public User getUser() {
+		if (user != null)
+			return user;
+
+		if (getUserId() == null)
+			return null;
+
+		user = UserQuery.me().findById(getUserId());
+		return user;
+	}
+
+	public Object getObject() {
+		if (object != null) {
+			return object;
+		}
+
+		if (getObjectId() == null) {
+			return null;
+		}
+
+		object = ContentQuery.me().findById(getObjectId());
+		return object;
+	}
+
+	public Object getUserObject() {
+		if (object != null) {
+			return object;
+		}
+
+		if (getObjectId() == null) {
+			return null;
+		}
+
+		object = UserQuery.me().findById(getObjectId());
+		return object;
+	}
+
+	public Object getTaxonomyObject() {
+		if (object != null) {
+			return object;
+		}
+
+		if (getObjectId() == null) {
+			return null;
+		}
+
+		object = TaxonomyQuery.me().findById(getObjectId());
+		return object;
 	}
 
 	public String getNicknameOrUsername() {
@@ -152,6 +245,10 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 		return getTaxonomyAsUrl(Taxonomy.TYPE_TAG);
 	}
 
+	public String getTagsAsUrl(String attrs) {
+		return getTaxonomyAsUrl(Taxonomy.TYPE_TAG, attrs);
+	}
+
 	public String getCategorysAsString() {
 		return getTaxonomyAsString(Taxonomy.TYPE_CATEGORY);
 	}
@@ -189,10 +286,16 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 	}
 
 	public String getTaxonomyAsUrl(String type) {
+		return getTaxonomyAsUrl(type, null);
+	}
+
+	public String getTaxonomyAsUrl(String type, String attrs) {
 		StringBuilder retBuilder = null;
 		String taxonomyString = get("taxonomys");
 		if (taxonomyString != null) {
 			String[] taxonomyStrings = taxonomyString.split(",");
+			if (StringUtils.isBlank(attrs))
+				attrs = "";
 			for (String taxonomyStr : taxonomyStrings) {
 				if (retBuilder == null) {
 					retBuilder = new StringBuilder();
@@ -206,7 +309,7 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 				if (propertes != null && propertes.length == 4) {
 					if (type.equals(propertes[3])) {
 						String url = JFinal.me().getContextPath() + TaxonomyRouter.getRouter(getModule(), propertes[1]);
-						String string = String.format("<a href=\"" + url + "\" >%s</a>", propertes[2]);
+						String string = String.format("<a href=\"%s\" %s >%s</a>", url, attrs, propertes[2]);
 						retBuilder.append(string).append(",");
 					}
 				}
@@ -277,7 +380,11 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 		if (this.childList == null) {
 			this.childList = new ArrayList<Content>();
 		}
-		childList.add(child);
+		
+		//如果是从ehcache内存取到的数据，可能该model已经添加过了
+		if(!childList.contains(child)){
+			childList.add(child);
+		}
 	}
 
 	public List<Content> getChildList() {
@@ -291,7 +398,7 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 	public String getUrl() {
 		String baseUrl = null;
 		if (Consts.MODULE_PAGE.equals(this.getModule())) {
-			return PageRouter.getRouter(this);
+			baseUrl = PageRouter.getRouter(this);
 		} else {
 			baseUrl = ContentRouter.getRouter(this);
 		}
@@ -324,7 +431,7 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 			return null;
 		}
 
-		Thumbnail thumbnail = TemplateUtils.currentTemplate().getThumbnailByName(name);
+		Thumbnail thumbnail = TemplateManager.me().currentTemplateThumbnail(name);
 		if (thumbnail == null) {
 			return imageSrc;
 		}
@@ -373,27 +480,19 @@ public class Content extends BaseContent<Content> implements ISortModel<Content>
 	}
 
 	public String getSummary() {
-		return summaryWithLen(100);
-	}
-
-	public String metadata(String key) {
-		Metadata m = MetaDataQuery.me().findByTypeAndIdAndKey(METADATA_TYPE, getId(), key);
-		if (m != null) {
-			return m.getMetaValue();
+		String summary = super.getSummary();
+		if (StringUtils.isBlank(summary)) {
+			summary = summaryWithLen(100);
 		}
-		return null;
+		return summary;
 	}
 
-	public boolean commentIsEnable() {
+	public boolean isCommentEnable() {
 		return !COMMENT_STATUS_CLOSE.equals(getCommentStatus());
 	}
 
-	public void fillSlugByTitleIfNull() {
-		String slug = getSlug();
-		if (StringUtils.isBlank(slug)) {
-			slug = getTitle();
-		}
-		setSlug(slug);
+	public boolean isCommentClose() {
+		return COMMENT_STATUS_CLOSE.equals(getCommentStatus());
 	}
 
 	@Override

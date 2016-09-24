@@ -21,7 +21,8 @@ import com.jfinal.render.TextRender;
 
 import io.jpress.core.Jpress;
 import io.jpress.template.Template;
-import io.jpress.template.TemplateUtils;
+import io.jpress.template.TemplateManager;
+import io.jpress.utils.StringUtils;
 
 public class JErrorRenderFactory implements IErrorRenderFactory {
 
@@ -31,22 +32,22 @@ public class JErrorRenderFactory implements IErrorRenderFactory {
 			return new TextRender(errorCode + " error in jpress.");
 		}
 
-		Template template = TemplateUtils.currentTemplate();
+		Template template = TemplateManager.me().currentTemplate();
 		if (null == template) {
 			return new TextRender(String.format("%s error! you haven't configure your template yet.", errorCode));
 		}
 
-		String errorHtml = TemplateUtils.currentTemplate().getPath() + "/" + errorCode + ".html";
+		String errorHtml = TemplateManager.me().currentTemplatePath() + "/" + errorCode + ".html";
 
-		String renderType = TemplateUtils.currentTemplate().getRenderType();
-		
-		//the default render type is freemarker
-		if (renderType == null || "".equals(renderType.trim())) {
-			return new JFreemarkerRender(errorHtml);
+		String renderType = TemplateManager.me().currentTemplate().getRenderType();
+
+		// the default render type is freemarker
+		if (StringUtils.isBlank(renderType)) {
+			return new JFreemarkerRender(errorHtml, true);
 		}
 
 		if ("freemarker".equalsIgnoreCase(renderType)) {
-			return new JFreemarkerRender(errorHtml);
+			return new JFreemarkerRender(errorHtml, true);
 		} else if ("thymeleaf".equalsIgnoreCase(renderType)) {
 			return new ThymeleafRender(errorHtml);
 		}

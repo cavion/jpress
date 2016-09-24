@@ -18,9 +18,10 @@ package io.jpress.core.addon;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -39,123 +40,185 @@ import io.jpress.utils.StringUtils;
  */
 public class AddonManager {
 
+	public static final String MESSAGE_ON_ADDON_LOAD_START = "addonManager:on_addon_load_start";
+	public static final String MESSAGE_ON_ADDON_LOAD_FINISHED = "addonManager:on_addon_load_finished";
+
+	public static final String MESSAGE_ON_ADDON_STARTUP_START = "addonManager:on_addon_startup_start";
+	public static final String MESSAGE_ON_ADDON_STARTUP_FINISHED = "addonManager:on_addon_startup_finished";
+
 	private static final Log log = Log.getLog(AddonManager.class);
 
-	private List<Addon> addonList = new ArrayList<Addon>();
-	private List<Addon> startedAddonList = new ArrayList<Addon>();
+	private final Map<String, AddonInfo> addonMap = new ConcurrentHashMap<String, AddonInfo>();
+
 	private static AddonManager manager = new AddonManager();
 
 	private AddonManager() {
-		addonList.clear();
-		startedAddonList.clear();
-		loadAllAddons();
+		autoInstall();
+		autoStart();
 	}
 
-	public void reload() {
-		addonList.clear();
-		startedAddonList.clear();
-		loadAllAddons();
-	}
-
-	public static AddonManager get() {
+	public static AddonManager me() {
 		return manager;
 	}
 
-	public Addon findById(String id) {
+	public AddonInfo findById(String id) {
 		if (id == null) {
 			return null;
 		}
 
-		for (Addon addon : addonList) {
-			if (id.equals(addon.getId())) {
-				return addon;
-			}
-		}
-
-		return null;
+		return addonMap.get(id);
 	}
 
-	public boolean start(Addon addon) {
-		OptionQuery.me().saveOrUpdate("addon_start_" + addon.getId(), Boolean.TRUE.toString());
-		boolean isSuccess = addon.start();
-		if (!isSuccess) {
-			log.warn("addon:" + addon.getId() + " start fail!!!");
-		} else {
-			startedAddonList.add(addon);
-		}
-		return isSuccess;
+	/**
+	 * 启动插件
+	 * 
+	 * @param addon
+	 * @return
+	 */
+	public boolean start(AddonInfo addon) {
+		OptionQuery.me().saveOrUpdate(buildOptionKey(addon), Boolean.TRUE.toString());
+		return addon.start();
 	}
 
-	public boolean stop(Addon addon) {
-		OptionQuery.me().saveOrUpdate("addon_start_" + addon.getId(), Boolean.FALSE.toString());
-		boolean isSuccess = addon.stop();
-		if (!isSuccess) {
-			log.warn("addon:" + addon.getId() + " stop fail!!!");
-		} else {
-			startedAddonList.remove(addon);
-		}
-		return isSuccess;
+	/**
+	 * 停止插件
+	 * 
+	 * @param addon
+	 * @return
+	 */
+	public boolean stop(AddonInfo addon) {
+		OptionQuery.me().saveOrUpdate(buildOptionKey(addon), Boolean.FALSE.toString());
+		return addon.stop();
 	}
 
-	public boolean uninstall(Addon addon) {
-		AddonManager.get().stop(addon);
+	private String buildOptionKey(AddonInfo addon) {
+		return "addon_start_" + addon.getId();
+	}
+
+	/**
+	 * 安装插件
+	 * 
+	 * @param file
+	 */
+	public boolean install(File file) {
+		AddonInfo addon = loadAddonByJarFile(file);
+		if (addon == null) {
+			return false;
+		}
+
+		return registerAddon(addon);
+	}
+
+	/**
+	 * 卸载插件
+	 * 
+	 * @param addon
+	 * @return
+	 */
+	public boolean uninstall(AddonInfo addon) {
+		
+		stop(addon);
 
 		File addonJarFile = new File(PathKit.getWebRootPath(), addon.getJarPath());
 		if (addonJarFile.exists()) {
-			addonList.remove(addon);
+			unRegisterAddon(addon);
 			return addonJarFile.delete();
 		}
 		return false;
 	}
 
-	public List<Addon> getAddons() {
-		return addonList;
+	/**
+	 * 所有插件
+	 * 
+	 * @return
+	 */
+	public List<AddonInfo> getAddons() {
+		List<AddonInfo> lis = new ArrayList<AddonInfo>();
+		for (Map.Entry<String, AddonInfo> entry : addonMap.entrySet()) {
+			lis.add(entry.getValue());
+		}
+		return lis;
 	}
 
-	public List<Addon> getStartedAddons() {
-		return startedAddonList;
+	/**
+	 * 所有已经启动的插件
+	 * 
+	 * @return
+	 */
+	public List<AddonInfo> getStartedAddons() {
+		List<AddonInfo> list = new ArrayList<AddonInfo>();
+		for (Map.Entry<String, AddonInfo> entry : addonMap.entrySet()) {
+			if (entry.getValue().isStart()) {
+				list.add(entry.getValue());
+			}
+		}
+		return list;
 	}
 
-	private void loadAllAddons() {
+	/**
+	 * 注册插件
+	 * 
+	 * @param addon
+	 */
+	public boolean registerAddon(AddonInfo addon) {
+		if (addonMap.containsKey(addon.getId())) {
+			return false;
+		}
+
+		addonMap.put(addon.getId(), addon);
+		return true;
+	}
+
+	/**
+	 * 取消注册插件
+	 * 
+	 * @param addon
+	 */
+	public void unRegisterAddon(AddonInfo addon) {
+		addonMap.remove(addon.getId());
+	}
+
+	private void autoInstall() {
+
 		File addonsFile = new File(PathKit.getWebRootPath(), "/WEB-INF/addons");
 		if (addonsFile.exists()) {
 			File[] files = addonsFile.listFiles(new FilenameFilter() {
 				@Override
 				public boolean accept(File dir, String name) {
-					return name.endsWith(".jar") || name.endsWith(".zip");
+					return name.toLowerCase().endsWith(".jar");
 				}
 			});
 
 			if (files != null && files.length > 0) {
 				for (File file : files) {
-
-					Addon addon = loadAddon(file);
-					if (addon == null) {
-						continue;
-					}
-
-					addonList.add(addon);
-
-					Boolean start = OptionQuery.me().findValueAsBool("addon_start_" + addon.getId());
-					if (start != null && start == true) {
-						if (addon.start()) {// 启动成功
-							startedAddonList.add(addon);
-						}
-					}
+					install(file);
 				}
 			}
 		}
+
+	}
+
+	private void autoStart() {
+
+		for (Map.Entry<String, AddonInfo> entry : addonMap.entrySet()) {
+			Boolean start = OptionQuery.me().findValueAsBool(buildOptionKey(entry.getValue()));
+			if (start != null && start == true) {
+				start(entry.getValue());
+			}
+		}
+
 	}
 
 	@SuppressWarnings({ "unchecked" })
-	private static Addon loadAddon(File file) {
-		Addon addon = null;
+	private AddonInfo loadAddonByJarFile(File file) {
+		AddonInfo addon = null;
 		JarFile jarFile = null;
 		AddonClassLoader acl = null;
 		try {
 			jarFile = new JarFile(file);
 			acl = new AddonClassLoader(file.getAbsolutePath());
 			acl.init();
+			acl.autoLoadClass(jarFile);
 
 			Manifest mf = jarFile.getManifest();
 			Attributes attr = mf.getMainAttributes();
@@ -175,7 +238,7 @@ public class AddonManager {
 				String version = attr.getValue("Addon-Version");
 				String versionCode = attr.getValue("Addon-Version-Code");
 
-				addon = new Addon();
+				addon = new AddonInfo();
 				addon.setId(id);
 				addon.setTitle(title);
 				addon.setAddonClass(className);
@@ -186,8 +249,8 @@ public class AddonManager {
 				addon.setVersionCode(Integer.parseInt(versionCode.trim()));
 				addon.setJarPath(FileUtils.removeRootPath(file.getAbsolutePath()));
 
-				Class<? extends IAddon> clazz = (Class<? extends IAddon>) acl.loadClass(className);
-				addon.setAddonImpl(clazz.newInstance());
+				Class<? extends Addon> clazz = (Class<? extends Addon>) acl.loadClass(className);
+				addon.setAddon(clazz.newInstance());
 				return addon;
 			}
 		} catch (Throwable e) {
@@ -210,28 +273,16 @@ public class AddonManager {
 	}
 
 	public Object invokeHook(String hookName, Object... objects) {
-		List<Addon> addons = getStartedAddons();
-		for (Addon addon : addons) {
-			if (addon.getHasError()) {
+		List<AddonInfo> addons = getStartedAddons();
+		for (AddonInfo addonInfo : addons) {
+			if (addonInfo.getHasError()) {
 				continue;
 			}
-			Method method = addon.getHooks().method(hookName);
-			if (method != null) {
-				Hook hook = null;
-				try {
-					hook = addon.getHooks().hook(hookName);
-					Object ret = method.invoke(hook, objects);
-					if (!hook.letNextHookInvoke()) {
-						return ret;
-					}
-				} catch (Throwable e) {
-					addon.setHasError(true);
-					log.error("HookInvoker invoke error", e);
-				} finally {
-					if (hook != null) {
-						hook.hookInvokeFinished();
-					}
-				}
+
+			Addon addon = addonInfo.getAddon();
+			Object obj = addon.getHooks().invokeHook(hookName, objects);
+			if (!addon.letNextHookInvoke()) {
+				return obj;
 			}
 		}
 		return null;
